@@ -297,6 +297,45 @@
     .hero{ padding: 48px 18px 60px; }
     nav{ justify-content:flex-start; overflow-x:auto; }
   }
+
+  @media print{
+    @page{ size: A4 landscape; margin: 12mm; }
+    nav, .toolbar, .toast, .hero .hint{ display:none !important; }
+    body{ background:#fff; }
+    .hero{
+      background: var(--deep) !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      padding: 24px 18px;
+    }
+    .hero::before, .hero::after{ display:none; }
+    main{ padding: 20px 4px; }
+    section.subject{
+      margin-bottom: 26px;
+      page-break-inside: avoid;
+    }
+    .table-wrap{
+      box-shadow:none;
+      break-inside: avoid;
+    }
+    thead th{
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    tbody th{
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    tbody tr:nth-child(even) td{
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    table{ min-width: 0; width:100%; }
+    td, th{ font-size: .72rem !important; padding: 6px 8px !important; }
+    [contenteditable="true"]:hover, [contenteditable="true"]:focus{
+      background:none; box-shadow:none;
+    }
+  }
 </style>
 </head>
 <body>
@@ -693,41 +732,43 @@
 <footer contenteditable="true">Document modifiable — cliquez sur un texte pour l'éditer, puis utilisez « Enregistrer » pour conserver vos changements dans ce navigateur.</footer>
 
 <div class="toolbar">
-  <button id="resetBtn" title="Revenir au contenu d'origine">Réinitialiser</button>
-  <button id="saveBtn" title="Enregistrer mes modifications">💾 Enregistrer</button>
+  <button id="pdfBtn" title="Exporter la page en PDF">📄 Exporter en PDF</button>
+  <button id="saveBtn" title="Télécharger le fichier HTML mis à jour avec vos modifications">💾 Enregistrer le fichier</button>
 </div>
-<div class="toast" id="toast">Modifications enregistrées</div>
+<div class="toast" id="toast">Fichier téléchargé ✓</div>
 
 <script>
-  const STORAGE_KEY = 'programmation_html_v1';
-  const main = document.querySelector('body');
-
   function showToast(msg){
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(()=> t.classList.remove('show'), 1800);
+    setTimeout(()=> t.classList.remove('show'), 2200);
   }
 
+  // "Enregistrer" télécharge une nouvelle version du fichier HTML avec vos
+  // modifications déjà intégrées dans le code : il suffit de remplacer
+  // l'ancien fichier programmation.html par celui-ci pour que ce soit définitif.
   document.getElementById('saveBtn').addEventListener('click', () => {
-    localStorage.setItem(STORAGE_KEY, document.querySelector('main').innerHTML + '|||HERO|||' + document.querySelector('.hero').innerHTML);
-    showToast('Modifications enregistrées ✓');
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelector('.toolbar')?.remove();
+    clone.querySelector('#toast')?.remove();
+    const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'programmation.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    showToast('Fichier téléchargé — remplacez l\'ancien par celui-ci ✓');
   });
 
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    if(confirm("Effacer vos modifications enregistrées et revenir à la version d'origine du fichier ?")){
-      localStorage.removeItem(STORAGE_KEY);
-      location.reload();
-    }
-  });
-
-  window.addEventListener('DOMContentLoaded', () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if(saved){
-      const parts = saved.split('|||HERO|||');
-      if(parts[0]) document.querySelector('main').innerHTML = parts[0];
-      if(parts[1]) document.querySelector('.hero').innerHTML = parts[1];
-    }
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    window.print();
   });
 </script>
 
